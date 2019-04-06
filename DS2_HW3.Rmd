@@ -1,0 +1,73 @@
+---
+title: "DS2_HW3"
+author: "Siyan Chen"
+date: "4/6/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(ISLR)# data
+library(caret) # featureplot
+library(glmnet) # glm
+library(e1071)# confusion matrix
+library(pROC)
+df = Weekly
+head(df)
+```
+
+### (a)  Produce some graphical summaries of theWeeklydata.
+
+```{r}
+featurePlot(x = df[, 2:7],
+            y = df$Direction,
+            scales = list(x=list(relation = "free"),
+                          y=list(relation = "free")),
+            plot = "box", pch = "|")
+```
+
+### (b) Use the full data set to perform a logistic regression withDirectionas the responseand the five Lagv ariables plus Volumeas predictors.  Do any of the predictors appearto be statistically significant?  If so, which ones?
+
+```{r}
+set.seed(1)
+rowTrain = createDataPartition(y = df$Direction,
+                               p = 0.75,
+                               list = FALSE)
+glm_fit = glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
+              data = df,
+              subset = rowTrain,
+              family = binomial)
+contrasts(df$Direction)
+summary(glm_fit)
+```
+Yes, Lag1, Lag2 and Intercept 
+
+### (c)  Compute  the  confusion  matrix  and  overall  fraction  of  correct  predictions.   Briefly explain what the confusion matrix is telling you.
+
+```{r}
+# Bayes classigier(cutoff 0.5)
+test.pred.prob = predict(glm_fit, newdata = df[-rowTrain,],
+                         type = "response")
+test.pred = rep("Down", length(test.pred.prob))
+test.pred[test.pred.prob>0.5] = "Up"
+
+# confustionMatrix
+confusionMatrix(data = as.factor(test.pred),
+                reference = as.factor(df$Direction[-rowTrain]),
+                positive = "Up")
+
+```
+
+### (d)  Plot the ROC curve using the predicted probability from logistic regression and reportthe AUC.
+```{r}
+roc_glm = roc(df$Direction[-rowTrain], test.pred.prob)
+plot(roc_glm, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc_glm), col = 4, add = TRUE)
+```
+
+
+
+### (e)  Now fit the logistic regression model using a training data period from 1990 to 2008,withLag1andLag2as the predictors.  Plot the ROC curve using the held out data(that is, the data from 2009 and 2010) and report the AUC.
+
+### (f)  Repeat (e) using LDA and QDA.
+
+### (g)  Repeat (e) using KNN. Briefly discuss your results.

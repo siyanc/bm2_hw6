@@ -1,0 +1,74 @@
+---
+title: "HW6"
+author: "Siyan Chen"
+date: "4/1/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(nlme)
+dental_df = read.delim("/Users/siyanchen/Desktop/data/HW6-dental copy.txt", header = TRUE, sep = "") %>%
+  janitor::clean_names()
+  
+```
+
+# PROBLEM1
+
+$var(Y_{ij})=var(\mu+b_i+e_{ij})$
+$=var(b_i)+var(e_{ij})$
+$={\sigma_b}^2+{\sigma_e}^2$
+
+$cov(Y_{ij},Y_{ik}) = E[(Y_{ij}-\mu_{ij})(Y_{ik}-\mu_{ik})]$
+$=E(b_i+e_{ij})(b_i+e_{ik})$
+$=E({b_i}^2+e_{ij}*e_{ik}+b_i*e_{ik}+b_i*e_{ij})$
+$=E({b_i}^2)+E(e_{ij}*e_{ik})+E(b_i*e_{ik})+E(b_i*e_{ij})$
+$=E(b_i^2)$
+$=(Eb_i)^2+var(b_i)$
+$=\sigma_b^2$
+
+$corr(Y_{ij},Y_{ik})=\frac{cov(Y_{ij},Y_{ik})}{\sqrt{ var(Y_{ij})*var(Y_{ik})}}$
+
+$={\sigma_b}^2/({\sigma_b}^2+{\sigma_e}^2)$
+
+# PROBLEM 2
+### 2.1
+
+```{r}
+ggplot(dental_df, aes(x = age, y = distance, group = child)) + geom_line(aes(color = factor(gender))) 
+```
+
+### 2.2
+$E(Y_{ij})=\beta_0+\beta_1*age_{ij}$\
+$var(Y_{ij})=var(a_i)+var(b_k)+var(e_{ij})$
+$={\sigma_a}^2+{\sigma_b}^2+{\sigma_e}^2$
+
+### 2.3
+
+```{r}
+### compound symmetry
+comsym = gls(distance ~ age + gender,dental_df, correlation=corCompSymm(form = ~ 1|child),weights=varIdent(form = ~ 1|age), method="REML")
+summary(comsym)
+corMatrix(comsym$modelStruct$corStruct)[[1]]
+```
+
+
+```{r}
+### exponential
+exp = gls(distance ~ age + gender,dental_df, correlation=corExp(form = ~ 1|child), method="REML")
+summary(exp)
+corMatrix(exp$modelStruct$corStruct)[[1]]
+```
+
+
+```{r}
+### autoregressive
+auto1 = gls(distance ~ age + gender,dental_df, correlation=corAR1(form = ~ 1|child), method="REML")
+summary(auto1)
+corMatrix(auto1$modelStruct$corStruct)[[1]]
+```
+The three method produce similar coefficient estimates. For model with compound symmetry covariance, variance is constant and correlation between any two visits is 0.617.
+Exponential and autogressive covariance have same covariance and coefficient estimae.Exponential covariance is a gneneralization of AR(1) and correlation decreases exponentially as age difference increases. It reduces to AR(1) when all response time are same and the correlation decreases between two ages. 
