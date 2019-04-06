@@ -6,6 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
+library(tidyverse)
 library(ISLR)# data
 library(caret) # featureplot
 library(glmnet) # glm
@@ -58,6 +59,7 @@ confusionMatrix(data = as.factor(test.pred),
 ```
 
 ### (d)  Plot the ROC curve using the predicted probability from logistic regression and reportthe AUC.
+
 ```{r}
 roc_glm = roc(df$Direction[-rowTrain], test.pred.prob)
 plot(roc_glm, legacy.axes = TRUE, print.auc = TRUE)
@@ -66,7 +68,41 @@ plot(smooth(roc_glm), col = 4, add = TRUE)
 
 
 
-### (e)  Now fit the logistic regression model using a training data period from 1990 to 2008,withLag1andLag2as the predictors.  Plot the ROC curve using the held out data(that is, the data from 2009 and 2010) and report the AUC.
+### (e)  Now fit the logistic regression model using a training data period from 1990 to 2008,with Lag1 and Lag2 as the predictors.  Plot the ROC curve using the held out data(that is, the data from 2009 and 2010) and report the AUC.
+
+```{r}
+train_subset = df %>% 
+  filter(1990<=Year& Year<=2008)
+test_subset = anti_join(df, train_subset)
+rowtrain = train_subset$Direction
+rowtest = test_subset$Direction
+
+glm_fit1 = glm(Direction~ Lag1 + Lag2,
+               data = train_subset,
+               family = binomial)
+summary(glm_fit1)
+contrasts(train_subset$Direction)
+
+
+pred.test.value = predict(glm_fit1,
+                          newdata = test_subset,
+                          type = "response")
+# Bayes Method Cutoff
+pred.test = rep("Down", length(pred.test.value))
+pred.test[pred.test.value>0.5] = "Up"
+
+# Confusion Matrix
+confusionMatrix(data = as.factor(pred.test), 
+                reference = as.factor(rowtest),
+                positive = "Up")
+# ROC
+roc1 = roc(test_subset$Direction, pred.test.value)
+plot(roc1, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc1), col = 4, add =TRUE)
+
+```
+
+
 
 ### (f)  Repeat (e) using LDA and QDA.
 
