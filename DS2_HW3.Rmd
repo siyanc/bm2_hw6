@@ -17,6 +17,10 @@ library(AppliedPredictiveModeling)# transparentTheme
 library(randomForest) # KNN
 df = Weekly
 head(df)
+set.seed(1)
+rowTrain = createDataPartition(y = df$Direction,
+                               p = 0.75,
+                               list = FALSE)
 ```
 
 ### (a)  Produce some graphical summaries of theWeeklydata.
@@ -27,59 +31,54 @@ featurePlot(x = df[, 2:7],
             y = df$Direction,
             scales = list(x=list(relation = "free"),
                           y=list(relation = "free")),
-            plot = "density", pch = "|")
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
 ```
 
 ### (b) Use the full data set to perform a logistic regression withDirectionas the responseand the five Lagv ariables plus Volumeas predictors.  Do any of the predictors appearto be statistically significant?  If so, which ones?
 
 ```{r}
-set.seed(1)
-rowTrain = createDataPartition(y = df$Direction,
-                               p = 0.75,
-                               list = FALSE)
 glm_fit = glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
               data = df,
-              subset = rowTrain,
               family = binomial)
 contrasts(df$Direction)
 summary(glm_fit)
 ```
-Yes, predictors Lag1, Lag2 appear to be statistically significant.
+Yes, predictors Lag2 appear to be statistically significant.
 
 ### (c)  Compute  the  confusion  matrix  and  overall  fraction  of  correct  predictions.   Briefly explain what the confusion matrix is telling you.
 
 ```{r}
 # Bayes classigier(cutoff 0.5)
-test.pred.prob = predict(glm_fit, newdata = df[-rowTrain,],
-                         type = "response")
-test.pred = rep("Down", length(test.pred.prob))
-test.pred[test.pred.prob>0.5] = "Up"
+pred.prob = predict(glm_fit,type = "response")
+pred = rep("Down", length(pred.prob))
+pred[pred.prob>0.5] = "Up"
 
 # confustionMatrix
-confusionMatrix(data = as.factor(test.pred),
-                reference = as.factor(df$Direction[-rowTrain]),
+confusionMatrix(data = as.factor(pred),
+                reference = as.factor(df$Direction),
                 positive = "Up")
 
 ```
-From the confusion matrix, sensiticity is 0.8146 (the probability of true "Up" is 0.8146 when the direction is predicted to be Up) and the sensitivity is 0.1322 (the probability of not "Up" is 0.1322 when the direction is predicted to be down)
-Accuracy tells the overall probaility of correct classifier is 0.511.
-Kappa is negative, which means that there is less agrrement than would be expected by chance give the marginal distribution. 
+From the confusion matrix, sensiticity is 0.9207 (the probability of true "Up" is 0.9207 when the direction is predicted to be Up) and the sensitivity is 0.1116 (the probability of not "Up" is 0.1322 when the direction is predicted to be down)
+Accuracy tells the overall probaility of correct classifier is 0.5611.
+Kappa is 0.035, which measures the interrater agreement for categorical items. 
 
 ### (d)  Plot the ROC curve using the predicted probability from logistic regression and reportthe AUC.
 
 ```{r}
-roc_glm = roc(df$Direction[-rowTrain], test.pred.prob)
+roc_glm = roc(df$Direction, pred.prob)
 plot(roc_glm, legacy.axes = TRUE, print.auc = TRUE)
 plot(smooth(roc_glm), col = 4, add = TRUE)
 ```
 
-Based on the plot, the AUC us 0.522, which suggests that the capability of logistic models distinguishing between classes is not good. 
+Based on the plot, the AUC us 0.554, which suggests that the capability of logistic models distinguishing between classes is not good. 
 
 ### (e)  Now fit the logistic regression model using a training data period from 1990 to 2008,with Lag1 and Lag2 as the predictors.  Plot the ROC curve using the held out data(that is, the data from 2009 and 2010) and report the AUC.
 
 ```{r}
 train_subset = df %>% 
-  filter(1990<=Year& Year<=2008)
+  filter(1990<=Year & Year<=2008)
 test_subset = anti_join(df, train_subset)
 rowtrain = train_subset$Direction
 rowtest = test_subset$Direction
