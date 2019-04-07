@@ -12,6 +12,9 @@ library(caret) # featureplot
 library(glmnet) # glm
 library(e1071)# confusion matrix
 library(pROC)
+library(mlbench)
+library(AppliedPredictiveModeling)# transparentTheme
+library(randomForest) # KNN
 df = Weekly
 head(df)
 ```
@@ -19,11 +22,12 @@ head(df)
 ### (a)  Produce some graphical summaries of theWeeklydata.
 
 ```{r}
+transparentTheme(trans = .4)
 featurePlot(x = df[, 2:7],
             y = df$Direction,
             scales = list(x=list(relation = "free"),
                           y=list(relation = "free")),
-            plot = "box", pch = "|")
+            plot = "density", pch = "|")
 ```
 
 ### (b) Use the full data set to perform a logistic regression withDirectionas the responseand the five Lagv ariables plus Volumeas predictors.  Do any of the predictors appearto be statistically significant?  If so, which ones?
@@ -54,7 +58,7 @@ test.pred[test.pred.prob>0.5] = "Up"
 # confustionMatrix
 confusionMatrix(data = as.factor(test.pred),
                 reference = as.factor(df$Direction[-rowTrain]),
-                positive = "Up")
+                positive = "Down")
 
 ```
 
@@ -106,4 +110,64 @@ plot(smooth(roc1), col = 4, add =TRUE)
 
 ### (f)  Repeat (e) using LDA and QDA.
 
+```{r}
+#Discriminant analysis
+## LDA
+library(MASS)
+lda.fit = lda(Direction ~ Lag1 + Lag2,
+              data = train_subset)
+plot(lda.fit)
+
+# evaluate the test set performance using roc
+lda.pred = predict(lda.fit, newdata = test_subset)
+head(lda.pred$posterior)
+roc.lda = roc(test_subset$Direction,lda.pred$posterior[,2],
+              levels = c("Down","Up"))
+plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc.lda), col = 4, add =TRUE)
+
+## QDA
+qda.fit = qda(Direction ~ Lag1 + Lag2,
+              data = train_subset)
+qda.pred = predict(qda.fit, newdata = test_subset)
+head(qda.pred$posterior)
+roc.qda = roc(test_subset$Direction, qda.pred$posterior[,2],
+              levels = c("Down","Up"))
+plot(roc.qda, legacy.axix = TRUE, print.auc = TRUE)
+plot(smooth(roc.qda), col = 4, add = TRUE)
+
+
+ 
+```
+
+
 ### (g)  Repeat (e) using KNN. Briefly discuss your results.
+
+```{r}
+# neighbor for classfication 
+# Using caret
+ctrl <-trainControl(method = "repeatedcv",repeats = 5,summaryFunction = twoClassSummary,classProbs = TRUE)
+
+model.knn = train(x = train_subset[, 2:3],
+                  y = train_subset$Direction,
+                  method = "knn",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = data.frame(k = seq(1,100, by = 5)),
+                  trControl = ctrl)
+ggplot(model.knn)
+# predict.train DO CENTRAL AND SCALE AUTOMATICALLY
+# # how to central and scale here ?
+# predic_knn = predict.train(model.knn, testX = test_subset[, 2:3],
+#             testY = test_subset$Direction)
+
+
+predic_knn1 = predict(model.knn$finalModel, newdata = test_subset[, 2:3])
+
+roc_knn = roc(test_subset$Direction, predic_knn1[,2],
+              levels = c("Down","Up"))
+plot(roc_knn, legacy.axis = TRUE, print.auc = TRUE)
+plot(smooth(roc_knn), col = 4, add = TRUE)
+
+
+```
+
