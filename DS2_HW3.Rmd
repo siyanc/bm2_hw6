@@ -44,7 +44,7 @@ glm_fit = glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
 contrasts(df$Direction)
 summary(glm_fit)
 ```
-Yes, Lag1, Lag2 and Intercept 
+Yes, predictors Lag1, Lag2 appear to be statistically significant.
 
 ### (c)  Compute  the  confusion  matrix  and  overall  fraction  of  correct  predictions.   Briefly explain what the confusion matrix is telling you.
 
@@ -58,9 +58,12 @@ test.pred[test.pred.prob>0.5] = "Up"
 # confustionMatrix
 confusionMatrix(data = as.factor(test.pred),
                 reference = as.factor(df$Direction[-rowTrain]),
-                positive = "Down")
+                positive = "Up")
 
 ```
+From the confusion matrix, sensiticity is 0.8146 (the probability of true "Up" is 0.8146 when the direction is predicted to be Up) and the sensitivity is 0.1322 (the probability of not "Up" is 0.1322 when the direction is predicted to be down)
+Accuracy tells the overall probaility of correct classifier is 0.511.
+Kappa is negative, which means that there is less agrrement than would be expected by chance give the marginal distribution. 
 
 ### (d)  Plot the ROC curve using the predicted probability from logistic regression and reportthe AUC.
 
@@ -70,7 +73,7 @@ plot(roc_glm, legacy.axes = TRUE, print.auc = TRUE)
 plot(smooth(roc_glm), col = 4, add = TRUE)
 ```
 
-
+Based on the plot, the AUC us 0.522, which suggests that the capability of logistic models distinguishing between classes is not good. 
 
 ### (e)  Now fit the logistic regression model using a training data period from 1990 to 2008,with Lag1 and Lag2 as the predictors.  Plot the ROC curve using the held out data(that is, the data from 2009 and 2010) and report the AUC.
 
@@ -106,7 +109,7 @@ plot(smooth(roc1), col = 4, add =TRUE)
 
 ```
 
-
+AUC is 0.556. The model does better job to classify compared to model in c.
 
 ### (f)  Repeat (e) using LDA and QDA.
 
@@ -139,7 +142,7 @@ plot(smooth(roc.qda), col = 4, add = TRUE)
 
  
 ```
-
+AUC for LDA is 0.557 and AUC for QDA is 0.529
 
 ### (g)  Repeat (e) using KNN. Briefly discuss your results.
 
@@ -171,3 +174,4 @@ plot(smooth(roc_knn), col = 4, add = TRUE)
 
 ```
 
+AUC for KNN is 0.566.
