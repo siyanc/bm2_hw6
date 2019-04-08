@@ -162,15 +162,6 @@ ggplot(model.knn)
 # predic_knn = predict.train(model.knn, testX = test_subset[, 2:3],
 #             testY = test_subset$Direction)
 
-
-predic_knn1 = predict(model.knn$finalModel, newdata = test_subset[, 2:3])
-
-roc_knn = roc(test_subset$Direction, predic_knn1[,2],
-              levels = c("Down","Up"))
-plot(roc_knn, legacy.axis = TRUE, print.auc = TRUE)
-plot(smooth(roc_knn), col = 4, add = TRUE)
-
-
 ```
 
-AUC for KNN is 0.566.
+According to the plot, the ROC is geatest when # neighbors is around 50 and the auc is not greater than 0.55. Compared the AUC, LDA model did better job to distinguish the two classes. 
