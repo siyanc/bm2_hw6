@@ -1,0 +1,133 @@
+---
+title: "BM_HW7"
+author: "Siyan Chen"
+date: "4/15/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(nlme)
+library (lattice)
+df = read.delim("/Users/siyanchen/Desktop/data/HW7-politeness_data.csv", header = TRUE, sep = "," )
+head(df)
+```
+
+# 1.
+
+```{r}
+ggplot(df) + geom_boxplot(aes(x = gender, y = frequency))
+ggplot(df) + geom_boxplot(aes(x = attitude, y = frequency))
+```
+
+Based on the plot, female have higher frequency of pitcher compared to male. Inf attitude tends to have higher frequency of pitcher compared to plr attitude.
+
+# 2.
+
+```{r}
+# fit a random intercept model
+lmm1 = lme(frequency ~ gender + attitude, random = ~1 | subject, data = df, method = 'REML')
+summary(lmm1)
+VarCorr(lmm1)
+```
+
+### covariance matrix for a subject Yi
+
+$\sigma_b=24.45803$\
+$\sigma = 29.11537$\
+$$cov(Y_i) = \begin{bmatrix}
+1445.9 & 598.2 & \ldots & 598.2 \\
+598.2 & 1445.9 & \ldots & 598.2 \\
+\vdots & \vdots & \ddots & \vdots \\
+598.2 & 598.2 & \ldots & 1445.9 \\
+\end{bmatrix}_{14\times14}$$
+
+### covariance matrix for the REML estimates of fixed effects
+
+```{r}
+vcov(lmm1)
+```
+
+### BLUPs
+
+```{r}
+random.effects(lmm1)
+```
+
+### Residuals
+
+```{r}
+lmm1$residuals[, 2]
+```
+
+# 3
+
+```{r}
+lmm2 = lme(frequency ~ gender * attitude, random = ~ 1|subject, data = df, method = 'REML')
+summary(lmm2)
+# compare two  models
+
+lmm_1 = lme(frequency ~ gender + attitude, random = ~1 | subject, data = df, method = 'ML')
+lmm_2 = lme(frequency ~ gender * attitude, random = ~ 1|subject, data = df, method = 'ML')
+
+anova(lmm_2, lmm_1)
+```
+
+p-value is 0.2392 which is greater than the significant level. We cannot reject the null hypothesis that the small model fit data well. Therefore, we have not evidence to show that the interaction term is signifcantly associted with pitch. 
+
+# 4
+
+```{r}
+lmm3 = lme(frequency ~ gender + attitude, random = ~ 1 + attitude|subject, data = df, method = 'REML')
+summary(lmm3)
+VarCorr(lmm3)
+
+```
+
+model with random intercept and slope
+
+$Y_ij = \beta_1+\beta_2*I\{gender=male\}+\beta_3*I\{attitide = pol\}+
+b_{1i}+b_{2i}*I\{attitide = pol\}+\epsilon_{ij}$\
+$b_i$~N(0,G)
+$\epsilon_i$~$N(O,\sigma^2I)$
+
+
+Attitude of inf:
+
+$var(Y_{ij}=\sigma_{b1i}^2+\sigma^2$
+$cov(Y_{ij}=cov(b_{1i}+\epsilon_{ij},b_{1i}+\epsilon_{ik})=\sigma_{b1i}^2$
+$$cov(Y_i) = \begin{bmatrix}
+\sigma_{b1i}^2+\sigma^2&\sigma_{b1i}^2&\ldots&\sigma_{b1i}^2\\
+\sigma_{b1i}^2& \sigma_{b1i}^2+\sigma^2 &\ldots&\sigma_{b1i}^2\\
+\vdots &\vdots&\ddots&\vdots\\
+\sigma_{b1i}^2&\sigma_{b1i}^2&\ldots&\sigma_{b1i}^2+\sigma^2\\
+\end{bmatrix}_{14\times14}$$
+
+Attitude of pol
+
+$$cov(Y_i) = \begin{bmatrix}
+\sigma_{b2i}^2+\sigma_{b1i}^2+\sigma^2&\sigma_{b2i}^2+\sigma_{b1i}^2&\ldots&\sigma_{b2i}^2+\sigma_{b1i}^2\\
+\sigma_{b2i}^2+\sigma_{b1i}^2&\sigma_{b2i}+\sigma_{b1i}^2+\sigma^2 &\ldots&\sigma_{b2i}^2+\sigma_{b1i}^2\\
+\vdots &\vdots&\ddots&\vdots\\
+\sigma_{b2i}^2+\sigma_{b1i}^2&\sigma_{b2i}^2+\sigma_{b1i}^2&\ldots&\sigma_{b2i}+\sigma_{b1i}^2+\sigma^2\\
+\end{bmatrix}_{14\times14}$$\
+
+$cov(Y_{ij}-in,Y_{ij}-pol)=\sigma_{b1i}^2+\sigma_{b2i}^2$ approximate to $\sigma_{b1i}$
+
+Therefore, the coveriance matrix for subject Yi is 
+
+$$cov(Y_i) = \begin{bmatrix}
+1445.9&598.2&\ldots&598.2\\
+598.2&1445.9&\ldots&598.2\\
+\vdots &\vdots&\ddots&\vdots\\
+598.2&598.2&\ldots&1445.9\\
+\end{bmatrix}_{14\times14}$$\
+Which is approximate to compound symmetry.
+
+```{r}
+fixed.effects(lmm3)
+random.effects(lmm3)
+
+```
+
+Fixed effect of first female is 257.0 and random effect is -0.0000008408891. BLUP of first female is -13.575831
