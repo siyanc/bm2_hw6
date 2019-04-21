@@ -1,0 +1,113 @@
+---
+title: "DS2_HW4_REGRESSION_TREE"
+author: "Siyan Chen"
+date: "4/21/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(lasso2)
+library(ranger)
+library(caret)
+library(rpart) # classification tree
+library(rpart.plot)
+library(gbm)
+library(randomForest)
+```
+
+```{r}
+data(Prostate)
+head(Prostate)
+
+set.seed(1)
+rowtrain = createDataPartition(y = Prostate$lpsa,
+                              p = 0.75,
+                              list = FALSE)
+ctr1 = trainControl(method = "cv")
+
+```
+
+### 1a) Fit a regression tree withlpsaas the response;Use cross-validation to determine the optimal tree size. Which tree size correspondsto the lowest cross-validation error?  Is this the same as the tree size obtained usingthe 1 SE rule?
+
+
+
+```{r}
+set.seed(1) 
+tree1 = rpart(formula = lpsa~., data = Prostate)
+rpart.plot(tree1)
+cp_table = printcp(tree1)### cross validation built in rpart; large cp give smaller tree
+plotcp(tree1)
+### tree by minimium cross validation error
+minerror = which.min(cp_table[,4])
+tree2 = prune(tree1, cp = cp_table[minerror,1])
+### 1SE rule- simplest model with error smaller than the line
+tree3 = prune(tree1, cp = cp_table[cp_table[,4]<cp_table[minerror,4]+cp_table[minerror,5],1][1])
+# split 3
+
+```
+
+According to the plot. the optimal tree size is 7+1 = 8 by cross validation. According to 1SE rule, the optimal split is 3. Therefore, the tree size are different. 
+
+### 2  Create  a  plot  of  the  final  tree  you  choose.   Pick  one  of  the  terminal  nodes,  andinterpret the information displayed.
+
+```{r}
+rpart.plot(tree2)
+```
+
+
+### (c)  Perform bagging and report the variable importance.
+
+```{r}
+set.seed(2)
+rf.grid = expand.grid(mtry = 8,
+                      splitrule = "variance",
+                     min.node.size = 10:30)
+bagging.fit = train(lpsa~., Prostate, 
+                    method = "ranger",
+                    tuneGrid = rf.grid,
+                    trControl = ctr1)
+ggplot(bagging.fit , highlight = TRUE)
+
+bagging.imp = ranger(lpsa~., Prostate,
+                  mtry = 8, 
+                  splitrule = "variance", 
+                  min.node.size = 11,
+                  importance = "permutation",
+                  scale.permutation.importance = TRUE)
+barplot(sort(ranger::importance(bagging.imp), decreasing = FALSE),
+        las = 2, horiz = TRUE, cex.names = 0.7, col = colorRampPalette(colors = c("darkred", "white", "darkblue"))(19))
+                  
+```
+
+### (d)  Perform random forests and report the variable importance.
+
+```{r}
+rf.grid = expand.grid(mtry = 1:6,
+                      splitrule = "variance",
+                      min.node.size = 10:30)### ?
+set.seed(3)
+rf.fit = train(lpsa~., Prostate, 
+               method = "ranger",
+               tuneGrid = rf.grid,
+               trControl = ctr1)
+ggplot(rf.fit, highlight = TRUE)
+```
+
+### (e)  Perform boosting and report the variable importance.
+
+```{r}
+### tuning parameter
+gbm.grid = expand.grid(n.trees = c(2000,3000),  ###?
+                       interaction.depth = 2:10,
+                       shrinkage = c(0.001, 0.003, 0,005),
+                       n.minobsinnode = 1)
+### fit model
+gbm.fit = train(lpsa~.,Prostate,
+                distribution  = "gaussian",
+                method = "gbm",
+                tuneGrid = gbm.grid,
+                trControl = ctr1,
+                verbose = FALSE)
+```
+
+### (f)  Which of the above models will you select to predict PSA level?  Explain
