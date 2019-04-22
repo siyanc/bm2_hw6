@@ -7,6 +7,9 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 library(lasso2)
+library(mgcv)
+library(ISLR)
+library(dplyr)
 library(ranger)
 library(caret)
 library(rpart) # classification tree
@@ -32,6 +35,13 @@ ctr1 = trainControl(method = "cv")
 
 
 ```{r}
+set.seed(1)
+rpart.fit = train(lpsa~., Prostate,
+                  method = "rpart",
+                  tuneGrid = data.frame(cp = exp(seq(-6,-2,length=20))), trControl = ctr1)
+rpart.plot(rpart.fit$finalModel)
+
+#####
 set.seed(1) 
 tree1 = rpart(formula = lpsa~., data = Prostate)
 rpart.plot(tree1)
@@ -43,7 +53,7 @@ tree2 = prune(tree1, cp = cp_table[minerror,1])
 ### 1SE rule- simplest model with error smaller than the line
 tree3 = prune(tree1, cp = cp_table[cp_table[,4]<cp_table[minerror,4]+cp_table[minerror,5],1][1])
 # split 3
-
+rpart.plot(tree3)
 ```
 
 According to the plot. the optimal tree size is 7+1 = 8 by cross validation. According to 1SE rule, the optimal split is 3. Therefore, the tree size are different. 
@@ -82,15 +92,26 @@ barplot(sort(ranger::importance(bagging.imp), decreasing = FALSE),
 ### (d)  Perform random forests and report the variable importance.
 
 ```{r}
+### tuning parameter
 rf.grid = expand.grid(mtry = 1:6,
                       splitrule = "variance",
                       min.node.size = 10:30)### ?
+### fit model
 set.seed(3)
 rf.fit = train(lpsa~., Prostate, 
                method = "ranger",
                tuneGrid = rf.grid,
                trControl = ctr1)
+### tuning parameter choosen
 ggplot(rf.fit, highlight = TRUE)
+### variable importance.
+rf.final.imp = ranger(lpsa~., Prostate,
+                      mtry = 4, splitrule = "variance",
+                      min.node.size = 24,
+                      importance = "permutation",
+                      scale.permutation.importance = TRUE)
+barplot(sort(ranger::importance(rf.final.imp), decreasing = FALSE),
+        las = 2, horiz = TRUE, cex.names = 0.7, col = colorRampPalette(colors = c("darkred", "white", "darkblue"))(19))
 ```
 
 ### (e)  Perform boosting and report the variable importance.
@@ -99,15 +120,116 @@ ggplot(rf.fit, highlight = TRUE)
 ### tuning parameter
 gbm.grid = expand.grid(n.trees = c(2000,3000),  ###?
                        interaction.depth = 2:10,
-                       shrinkage = c(0.001, 0.003, 0,005),
+                       shrinkage = c(0.001, 0.003, 0.005),
                        n.minobsinnode = 1)
 ### fit model
 gbm.fit = train(lpsa~.,Prostate,
-                distribution  = "gaussian",
                 method = "gbm",
                 tuneGrid = gbm.grid,
                 trControl = ctr1,
                 verbose = FALSE)
+ggplot(gbm.fit, highlight = TRUE)
+summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
 ```
 
 ### (f)  Which of the above models will you select to predict PSA level?  Explain
+
+```{r}
+resamp = resamples(list(rpart = rpart.fit, bagging = bagging.fit, rf = rf.fit, gbm = gbm.fit))
+summary(resamp)
+```
+
+# Problem 2
+
+```{r}
+data(OJ)
+head(OJ)
+levels(OJ$Purchase)
+rowtrain2 = createDataPartition(y = OJ$Purchase,
+                                p = 800/1070,
+                                list = FALSE)
+
+```
+
+
+### (a)  Fit a classification tree to the training set, withPurchaseas the response and theother  variables  as  predictors.   Use  cross-validation  to  determine  the  tree  size  andcreate a plot of the final tree.  Predict the response on the test data.  What is the testclassification error rate?
+
+```{r}
+ctr1 = trainControl(method = "repeatedcv",
+                    summaryFunction = twoClassSummary,
+                    classProbs = TRUE)
+set.seed(1)
+rpart.fit2 = train(Purchase~.,OJ,
+                  subset = rowtrain2,
+                  method = "rpart",
+                  tuneGrid = data.frame(cp = exp(seq(-6,-3,len=20))),
+                  trControl = ctr1,
+                  metric = "ROC")
+ggplot(rpart.fit2, highlight = TRUE)
+### plot of final tree
+rpart.plot(rpart.fit2$finalModel)
+### predict
+pred = predict(rpart.fit2, newdata = OJ[-rowtrain2,])
+### test classification error rate  
+mean(pred != OJ[-rowtrain2,]$Purchase)
+```
+
+According to cross validation, the optimal tree size is 11.
+
+### (b)  Perform random forests on the training set and report variable importance.  What isthe test error rate?
+
+```{r}
+rf.grid2 = expand.grid(mtry = 8:14,
+                      splitrule = "gini",
+                      min.node.size = seq(30,60,length = 5))
+set.seed(1)
+rf.fit2 = train(Purchase~., OJ,
+                subset = rowtrain2,
+                method = "ranger",
+                tuneGrid =  rf.grid2,
+                metric = "ROC",
+                trControl = ctr1)
+
+ggplot(rf.fit2, highlight = TRUE)
+
+### VARIABLE IMPORTANCE
+rf2.final.imp = ranger(Purchase~., OJ[rowtrain2,],
+                       mtry = 9 ,
+                       min.node.size = 45,
+                        splitrule = "gini",
+                       importance = "permutation",
+                       scale.permutation.importance = TRUE)
+barplot(sort(ranger::importance(rf2.final.imp), decreasing = FALSE),
+        las = 2, hori = TRUE, cex.names = 0.7,
+        col = colorRampPalette(colors = c("cyan","blue"))(8))
+### test error rate
+
+pred_rf = predict(rf.fit2, newdata = OJ[-rowtrain2,])
+mean(pred_rf!= OJ[-rowtrain2,]$Purchase)
+
+```
+
+
+### (c)  Perform boosting on the training set and report variable importance.  What is thetest error rate?
+
+```{r}
+gbm2.grid = expand.grid(n.trees = c(2000, 3000, 4000),
+                        interaction.depth = 1:6,
+                        shrinkage = c(0.001,0.003,0.005),
+                        n.minobsinnode = 1)
+gbm2.fit = train(Purchase~., OJ[rowtrain2,],
+                 tuneGrid = gbm2.grid,
+                 trControl = ctr1,
+                 method = "gbm",
+                 distribution = "bernoulli",
+                 metric = "ROC",
+                 verbose = FALSE)
+ggplot(gbm2.fit, highligh = TRUE)
+### important variable
+summary(gbm2.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
+### test error rate
+pred_gbm2 = predict(gbm2.fit, newdata = OJ[-rowtrain2,])
+mean(pred_gbm2!=OJ[-rowtrain2,]$Purchase)
+              
+```
+
