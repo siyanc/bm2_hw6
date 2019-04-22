@@ -61,9 +61,11 @@ According to the plot. the optimal tree size is 7+1 = 8 by cross validation. Acc
 ### 2  Create  a  plot  of  the  final  tree  you  choose.   Pick  one  of  the  terminal  nodes,  andinterpret the information displayed.
 
 ```{r}
-rpart.plot(tree2)
+rpart.plot(tree3)
 ```
 
+Since both models have similar cross validation error. We should choose the simpler model which is 1 SE model. 
+Node 3.8 interpretation: when the log cancer volumn is greater 2.5. the log mean of log prostate specific antigen is 3.8. The nodes include 22% response of training dataset.
 
 ### (c)  Perform bagging and report the variable importance.
 
@@ -88,6 +90,9 @@ barplot(sort(ranger::importance(bagging.imp), decreasing = FALSE),
         las = 2, horiz = TRUE, cex.names = 0.7, col = colorRampPalette(colors = c("darkred", "white", "darkblue"))(19))
                   
 ```
+
+Based on the plot above, the variable importance is lcavol > lweight > svi > pgg45 > lcp > gleason > lbph > age.
+
 
 ### (d)  Perform random forests and report the variable importance.
 
@@ -114,11 +119,13 @@ barplot(sort(ranger::importance(rf.final.imp), decreasing = FALSE),
         las = 2, horiz = TRUE, cex.names = 0.7, col = colorRampPalette(colors = c("darkred", "white", "darkblue"))(19))
 ```
 
+Based on the plot above, the variable importance is lcavol > lweight > svi > lcp > pgg45 > gleason > lbph > age.
+
 ### (e)  Perform boosting and report the variable importance.
 
 ```{r}
 ### tuning parameter
-gbm.grid = expand.grid(n.trees = c(2000,3000),  ###?
+gbm.grid = expand.grid(n.trees = c(2000,3000),  
                        interaction.depth = 2:10,
                        shrinkage = c(0.001, 0.003, 0.005),
                        n.minobsinnode = 1)
@@ -131,6 +138,7 @@ gbm.fit = train(lpsa~.,Prostate,
 ggplot(gbm.fit, highlight = TRUE)
 summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
 ```
+Based on the plot above, the variable importance is lcavol > lweight > lcp > age > svi  > pgg45 > lbph > gleason
 
 ### (f)  Which of the above models will you select to predict PSA level?  Explain
 
@@ -138,12 +146,12 @@ summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
 resamp = resamples(list(rpart = rpart.fit, bagging = bagging.fit, rf = rf.fit, gbm = gbm.fit))
 summary(resamp)
 ```
+Boosting model is selected because the cross validation error of boosting model is smallest among these models. 
 
 # Problem 2
 
 ```{r}
 data(OJ)
-head(OJ)
 levels(OJ$Purchase)
 rowtrain2 = createDataPartition(y = OJ$Purchase,
                                 p = 800/1070,
@@ -166,6 +174,7 @@ rpart.fit2 = train(Purchase~.,OJ,
                   trControl = ctr1,
                   metric = "ROC")
 ggplot(rpart.fit2, highlight = TRUE)
+rpart.fit2$finalModel$cptable
 ### plot of final tree
 rpart.plot(rpart.fit2$finalModel)
 ### predict
@@ -174,7 +183,7 @@ pred = predict(rpart.fit2, newdata = OJ[-rowtrain2,])
 mean(pred != OJ[-rowtrain2,]$Purchase)
 ```
 
-According to cross validation, the optimal tree size is 11.
+According to cross validation, the number of split is 10 and the optimal tree size is 11.The test classification error rate is 0.1858736.
 
 ### (b)  Perform random forests on the training set and report variable importance.  What isthe test error rate?
 
@@ -208,7 +217,9 @@ pred_rf = predict(rf.fit2, newdata = OJ[-rowtrain2,])
 mean(pred_rf!= OJ[-rowtrain2,]$Purchase)
 
 ```
+The importance of variable was shown above.
 
+The test classification error rate is 0.1821561.
 
 ### (c)  Perform boosting on the training set and report variable importance.  What is thetest error rate?
 
@@ -232,4 +243,5 @@ pred_gbm2 = predict(gbm2.fit, newdata = OJ[-rowtrain2,])
 mean(pred_gbm2!=OJ[-rowtrain2,]$Purchase)
               
 ```
-
+The importance of variable was shown above.
+The test classification error rate is 0.1747212.
