@@ -1,0 +1,72 @@
+---
+title: "DS2_HW5"
+author: "Siyan Chen"
+date: "4/24/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(ISLR)
+library(caret)
+data(OJ)
+head(OJ)
+```
+
+
+### (a) Fit a support vector classifier (linear kernel) to the training data with Purchase as the response and the other variables as predictors. What are the training and test error rates?
+
+```{r}
+set.seed(1)
+rowtrain = createDataPartition(y = OJ$Purchase,
+                               p = 800/1070,
+                               list = FALSE)
+
+ctr1 = trainControl(method = "cv")
+
+set.seed(1)
+svml.fit = train(Purchase~.,
+                data = OJ[rowtrain,],
+                method = "svmLinear2",
+                preProcess = c("center", "scale"),
+                tuneGrid = data.frame(cost = exp(seq(-5,1,len = 20))),
+                trControl = ctr1)
+ggplot(svml.fit, highlight = TRUE)
+best.svml = svml.fit$finalModel
+summary(best.svml)
+
+
+### test error
+pred.svml = predict(svml.fit, newdata = OJ[-rowtrain,])
+mean(pred.svml != OJ[-rowtrain,]$Purchase)
+```
+
+### (b) Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
+
+```{r}
+svmr.grid = expand.grid(C = exp(seq(-3, 3, len = 10)),
+                        sigma = exp(seq(-8, -3, len = 5)))
+set.seed(1)
+svmr.fit = train(Purchase~.,
+                 data = OJ[rowtrain,],
+                 method = "svmRadial",
+                 preProcess = c("center", "scale"),
+                 tuneGrid = svmr.grid,
+                 trControl = ctr1)
+
+ggplot(svmr.fit, highlight = TRUE)
+
+### test error rate
+pred.svmr = predict(svmr.fit, newdata = OJ[-rowtrain,])
+mean(pred.svmr != OJ[-rowtrain,]$Purchase)
+```
+
+
+### (c) Which approach seems to give a better result on this data?
+
+```{r}
+resamp = resamples(list(svml = svml.fit,svmr = svmr.fit))
+bwplot(resamp)
+summary(resamp)
+```
+
+
