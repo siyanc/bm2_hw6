@@ -34,11 +34,18 @@ ggplot(svml.fit, highlight = TRUE)
 best.svml = svml.fit$finalModel
 summary(best.svml)
 
+### train error
+pred.svml_train = predict(svml.fit, newdata = OJ[rowtrain,])
+1-confusionMatrix(data = pred.svml_train, reference = OJ$Purchase[rowtrain])$overall[["Accuracy"]]
+
 
 ### test error
 pred.svml = predict(svml.fit, newdata = OJ[-rowtrain,])
 mean(pred.svml != OJ[-rowtrain,]$Purchase)
+# OR 1-confusionMatrix(data = pred.svml, reference = OJ$Purchase[-rowtrain])$overall[["Accuracy"]]
 ```
+
+The trainning error rate is 0.1560549 and test error rate is 0.1858736.
 
 ### (b) Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
 
@@ -55,11 +62,18 @@ svmr.fit = train(Purchase~.,
 
 ggplot(svmr.fit, highlight = TRUE)
 
+### train error
+pred.svmr_train = predict(svmr.fit, newdata = OJ[rowtrain,])
+1-confusionMatrix(data = pred.svmr_train, reference = OJ$Purchase[rowtrain])$overall[["Accuracy"]]
+
+
 ### test error rate
 pred.svmr = predict(svmr.fit, newdata = OJ[-rowtrain,])
 mean(pred.svmr != OJ[-rowtrain,]$Purchase)
 ```
 
+
+Train error rate is  0.1510612 and test error rate is 0.2007435.
 
 ### (c) Which approach seems to give a better result on this data?
 
@@ -69,4 +83,4 @@ bwplot(resamp)
 summary(resamp)
 ```
 
-
+According the boxplot, both accuracy and kappa of the model with radial kernel is greater which suggests that it has smaller train error rate and greater inter-rater aggrement. Therefore, model with radial kernel is better.
