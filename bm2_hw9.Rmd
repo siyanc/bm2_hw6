@@ -1,0 +1,61 @@
+---
+title: "BM2_HW9"
+author: "Siyan Chen"
+date: "4/29/2019"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+library(knitr)
+library(KMsurv)
+library(survival)
+```
+
+
+
+### Problem 1
+$H(x)=\int_0^th(x).dx=\int_0^t\frac{2x}{1+x^2}.dx=ln(1+t^2)$\
+$h(x)=\frac{f(x)}{s(t)}$\
+$s(t)=exp(-H(x))=e^{-ln(1+t^2)}=\frac{1}{1+t^2}$\
+$f(t)=\frac{2t}{1+t^2}*\frac{1}{1+t^2}=\frac{2t}{(1+t^2)^2}$
+
+### Problem 2
+
+```{r}
+ti = c(1,2,4,5,6,7,8,9,10)
+ni = c(10,9,7,6,5,4,3,2,1)
+di = c(1,2,0,0,1,0,0,0,0)
+ci = c(0,0,1,1,0,1,1,1,1)
+lamda_i = c("1/10"," 2/9", "0/7"," 0/6", "1/5", "0/4", "0/3", "0/2", "0/1")
+Kaplan_Meier_estimator = c("1*(1-1/10)=0.9", "0.9*(1-2/9)=0.7", 0.7, 0.7, "0.7*(2-1/5)=0.56", 0.56, 0.56, 0.56, 0.56)
+Nelson_Aalen_estimator = c("1/10", "1/10+2/9=0.32", "0.32", "0.32", "0.32+1/5=0.52", "0.52", "0.52", "0.52", "0.52")
+Fleming_Harrington_estimator = c(0.90, 0.72, 0.72, 0.72, 0.59, 0.59, 0.59, 0.59, 0.59)
+df = data.frame(ti, ni, ci, lamda_i,  Kaplan_Meier_estimator, Nelson_Aalen_estimator, Fleming_Harrington_estimator )
+
+kable(df)
+```
+
+### Problem 3
+
+```{r}
+#Format
+#This data frame contains the following columns:
+#type Tumor DNA profile (1=Aneuploid Tumor, 2=Diploid Tumor) time Time to death or on-study time, weeks
+#delta Death indicator (0=alive, 1=dead)
+data(tongue)
+head(tongue)
+# KM survival function
+
+KM1=survfit(Surv(time,delta)~1, data = subset(tongue, type=="1"), conf.type='log')
+plot(KM1, mark.time = TRUE,xlab="Time", ylab="Survival Probability", main="Aneuploid Tumor", cex.lab=1.5, cex.main=1.5)
+
+
+KM2 = survfit(Surv(time,delta)~1, data = subset(tongue, type=="2"), conf.type='log')
+plot(KM2, mark.time = TRUE,xlab="Time", ylab="Survival Probability", main="Diploid Tumor", cex.lab=1.5, cex.main=1.5)
+
+
+summary(KM1, time=365/7)
+summary(KM2, time=365/7)
+```
+
+Based on the results,  1-year survival rate for aneuploid tumor is estimated to be 0.654 and its 95% CI is (0.537,0.797). 1-year survival rate for Diploid Tumor is estimated to be 0.486 and its 95% CI is (0.33, 0.716)
+ 
