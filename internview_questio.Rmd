@@ -1,0 +1,100 @@
+---
+title: "Roche_assignmnet"
+author: "Siyan Chen"
+date: "5/4/2019"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(tidytext)
+library(readr)
+library("readtext")
+library(tidyverse)
+```
+
+# extract each article in the collection
+
+```{r setup, include=FALSE}
+df = readLines("/Users/siyanchen/Desktop/bm2_hw6/data/collection.txt") 
+
+# extract each article in the collection
+section_index = grep(x = df, pattern = "^</doc>")
+section_index
+section_1 = df[1:182]
+section_2 = df[183:237]
+section_3 = df[238:445]
+
+page_s_index1 = grep(x = section_1, pattern = "^<p>") + 1
+page_f_index1 = grep(x = section_1, pattern = "^</p>") - 1
+
+page_s_index2 = grep(x = section_2, pattern = "^<p>") + 1
+page_f_index2 = grep(x = section_2, pattern = "^</p>") - 1
+
+page_s_index3 = grep(x = section_3, pattern = "^<p>") + 1
+page_f_index3 = grep(x = section_3, pattern = "^</p>") - 1
+
+
+### artical contents for artical 1, artical 2, artical 3
+contents_1= vector("list", length = length(page_s_index1)) 
+for (i in 1:length(page_s_index1)) {
+  contents_1[[i]] = section_1[page_s_index1[i]:page_f_index1[i]]
+  }
+
+contents_2= vector("list", length = length(page_s_index2)) 
+for (i in 1:length(page_s_index2)) {
+  contents_2[[i]] = section_2[page_s_index2[i]:page_f_index2[i]]
+}
+
+
+contents_3= vector("list", length = length(page_s_index3)) 
+for (i in 1:length(page_s_index3)) {
+  contents_3[[i]] = section_3[page_s_index3[i]:page_f_index3[i]]
+}
+
+
+head(contents_1)
+
+head(contents_2)
+
+head(contents_3)
+
+
+### string clean
+
+article1 = as.data.frame(unlist(contents_1)) %>%
+  rename(infor = c("unlist(contents_1)")) %>% 
+  mutate(infor = as.character(infor)) %>% 
+  mutate(infor = tolower(infor)) 
+
+
+article2 = as.data.frame(unlist(contents_2)) %>%
+  rename(infor = c("unlist(contents_2)")) %>% 
+  mutate(infor = as.character(infor)) %>% 
+  mutate(infor = tolower(infor))
+
+
+article3 = as.data.frame(unlist(contents_3)) %>%
+  rename(infor = c("unlist(contents_3)")) %>% 
+  mutate(infor = as.character(infor)) %>% 
+  mutate(infor = tolower(infor))
+
+```
+
+
+```{r}
+
+doc_no = grep(x = df, pattern = "^<docno>", value = TRUE)
+doc_no_index = grep(x = df, pattern = "^<docno>")
+doc_id = grep(x = df, pattern = "^<docid>", value = TRUE)
+doc_id_index = grep(x = df, pattern = "^<docid>")
+
+
+```
+
+
+```{r}
+# inspection_words = unnest_tokens(word, df)
+```
+
