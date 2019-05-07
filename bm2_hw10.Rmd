@@ -1,0 +1,28 @@
+---
+title: "hw10_bm2"
+author: "Siyan Chen"
+date: "5/6/2019"
+output: html_document
+---
+
+### problem1 
+
+```{r setup, include=FALSE}
+library(survival)
+library()
+```
+
+```{r}
+pair = c(1,1,2,2,3,3,4,4,5,5,6,6)
+time = c(4,2,12,15,8,21,10,23,19)
+cens = c(0,0,1,1,0,1,1,0,0,0)
+treat = rep(c("group1","group2"),6)
+df = data.frame(cbind(pair, time, cens, treat)) %>% 
+  mutate(pair = as.numeric(pair),
+         time = as.numeric(time),
+         cens = as.numeric(cens))
+survdiff(Surv(time,cens)~treat, data=df)
+library(survminer)
+ggsurvplot( survfit(Surv(time, cens) ~ treat, data = df), conf.int=TRUE)
+```
+

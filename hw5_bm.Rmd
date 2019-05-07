@@ -1,0 +1,152 @@
+---
+title: "bm2_Hw5"
+author: "Siyan Chen_sc4456"
+date: "3/7/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(pscl)
+```
+
+# Problem 1
+
+```{r setup, include=FALSE}
+crab_df = read.delim("/Users/siyanchen/Desktop/data/HW5-crab copy.txt", header = TRUE, sep = "")
+```
+
+### a
+
+```{r, warning=FALSE,message=FALSE}
+m1 = glm(Sa~W, family = poisson, data = crab_df)
+summary(m1)
+```
+
+```{r,warning=FALSE,message=FALSE}
+#gof
+res_pearson = residuals(m1, crab_df, type = "pearson")
+G = sum(res_pearson^2)
+pval = 1-pchisq(G, 171)
+pval  # fit bad
+```
+
+$log\lambda=\beta_0+\beta_1*x$\
+$log\lambda=-3.30+0.164*x$\
+$\beta_0$:The log number of satellites for each female when carapace width is 0, which is not meaningful.\
+$\beta1$:The log number of satellites for each female increases 0.164 for one unit increase in carapace width.
+
+This model follows chi-square distribution with degree of 171. The p value is 0, which is significant. Therefore, this model is not good fit. 
+
+
+
+### b
+
+```{r, warning=FALSE,message=FALSE}
+m2 = glm(Sa ~ W + Wt, family = poisson, data = crab_df)
+summary(m2)
+
+test.stat = m1$deviance - m2$deviance 
+df = 1
+pval = 1 - pchisq(test.stat, df = 1)
+pval # reject the null hypothesis, go with the bigger model
+```
+
+Deviance follows chi-square distribution with degree of 1. P value is significant, so we reject the null hypothesis, go with the bigger model(M2).
+
+### c
+
+```{r, warning=FALSE,message=FALSE}
+res_pearson2 = residuals(m2, crab_df, type = "pearson")
+G2 = sum(res_pearson2^2)
+1-pchisq(G2, 170) # not good fit
+phi = G2/(170)
+
+summary(m2, dispersion = phi)
+```
+
+```{r,echo=FALSE}
+plot(qnorm((173+1:173+0.5)/(2*173+1.125)),sort(abs(res_pearson2)), xlab='Expected Half-Normal Order Stats') + abline(a=0,b=1) + abline(a=0,b=sqrt(phi),lty=2)
+```
+
+
+Based on the plot, there is over dispersion om M2. The estimate of disperion parameter is 3.16. 
+After updating the model, we got model with same coefficients but different variance of each coefficient.
+
+$log\lambda=\beta_0+\beta_1*x_1 + \beta_2*x_2$\
+$log\lambda=-1.29+0.046*x_1 + 0.447*x_2$\
+$\beta_0$:The log number of satellites for each female when carapace width(W) is 0 and weight(Wt) is 0, which is not meaningful.\
+$\beta_1$:The log number of satellites for each female increases 0.046 for one unit increase in carapace width(W).\
+$\beta_2$:The log number of satellites for each female increases 0.447 for one unit increase in weight(Wt).
+
+# Problem 2
+
+```{r}
+par_df = read.delim("/Users/siyanchen/Desktop/data/HW5-parasite.txt", header = TRUE, sep = "") %>% 
+  mutate(Year = as.factor(Year),
+         Area = as.factor(Area))
+
+```
+
+### a
+
+```{r}
+p_model = glm(Intensity ~ I(Area) + I(Year) + Length, family = poisson, data = par_df)
+summary(p_model)
+```
+
+$log(\lambda) = \beta_0+\beta_1*I(area2)+\beta_2*I(area3)+\beta_3*I(area4)+\beta_4*I(year2000)+\beta_5(year2001)$\
+
+$\beta_0$ is not meaningful to interpret.\
+$\beta_1$:Log intensity rate of parasite on fish in area 2 decreases 0.212 compared to area 1, when other variables are constant.\
+$\beta_2$:Log intensity rate of parasite on fish in area 3 decreases 0.117 compared to area 1, when other variables are constant.\
+$\beta_3$:Log intensity rate of parasite on fish in area 4 increases 1.405 compared to area 1, when other variables are constant.\
+$\beta_4$:Log intensity rate of parasite on fish in year 2000 increases 0.670 compared to year 1999, when other variables are constant.\
+$\beta_5$:Log intensity rate of parasite on fish in year 2001 decreases 0218 compared to year 1999, when other variables are constant.\
+$\beta_6$:Log intensity rate of parasite on fish decreases 0.0284 for one unit increase in length when other variables are constant.
+
+### b
+
+```{r}
+r = residuals(p_model, data = par_df, type = "pearson")
+G_stats = sum(r^2)
+pval = 1-pchisq(G_stats, 1184)
+pval
+```
+
+The pearson residuals follows chi-square distribution with degree of 1184(G = 42164.97). P value is 0 which is significant. Therefore, we reject the null hypothesis and this model is not good fit. 
+
+### c
+
+```{r}
+i_model = zeroinfl(Intensity ~ I(Area) + I(Year) + Length, data = par_df)
+summary(i_model)
+
+```
+
+We use zero-inflated Possion model to classify the response at risk and response not at risk.
+$Z_i$ is a latent binary variable that generates structural zeros.
+$P(Z_i=0)=\pi_i$ \
+The response satisfies:
+$Y_i|(Z_i=0)=0$\
+$Y_i|(Z_i=0)$~possion($\lambda_i$)\
+Therefore, we get 
+$log(\lambda_i)=\beta_0 +\beta_1*I(area 2)+\beta_2*I(area3)+\beta_3*I(area4)+\beta_4*I(year2000)+\beta_5(year2001)$ \
+$log(\frac{\pi_i}{1-\pi_i})=z_i\gamma = \alpha_0 +\alpha_1*I(area 2)+\alpha_2*I(area3)+\alpha_3*I(area4)+\alpha_4*I(year2000)+\alpha_5(year2001)$ \
+
+$\beta_0$ is not meaningful to interpret.\
+$\beta_1$:Log intensity rate of parasite on fish in area 2 increases 0.27 compared to area 1, when other variables are constant.\
+$\beta_2$:Log intensity rate of parasite on fish in area 3 increases 0.15 compared to area 1, when other variables are constant.\
+$\beta_3$:Log intensity rate of parasite on fish in area 4 increases 0.94 compared to area 1, when other variables are constant.\
+$\beta_4$:Log intensity rate of parasite on fish in year 2000 increases 0.29 compared to year 1999, when other variables are constant.\
+$\beta_5$:Log intensity rate of parasite on fish in year 2001 decreases 0.045 compared to year 1999, when other variables are constant.\
+$\beta_6$:Log intensity rate of parasite on fish decreases 0.037 for one unit increase in length when other variables are constant.\
+$\alpha_0$:not meaningful for length = 0.\
+$\alpha_1$: Log odd ratio of fish not at risk of parasite vs. at risk is 0.72 for fish in area 2 versus in area 1, holding other variables constant.\
+$\alpha_2$:Log odd ratio of fish not at risk of parasite vs. at risk is 0.66 for fish in area 3 versus in area 1, holding other variables constant.\
+$\alpha_3$:Log odd ratio of fish not at risk of parasite vs. at risk is -1.02 for fish in area 4 versus in area 1, holding other variables constant.\
+$\alpha_4$:Log odd ratio of fish not at risk of parasite vs. at risk is -0.75 for fish in year 2000 versus in year 1999, holding other variables constant.\
+$\alpha_5$:Log odd ratio of fish not at risk of parasite vs. at risk is 0.45 for fish in year 2001 versus in year 1999, holding other variables constant.\
+$\alpha_6$:Log odd ratio of fish not at risk of parasite vs. at risk decreases 0.010 for one unit increas in length, holding other variables constant.\

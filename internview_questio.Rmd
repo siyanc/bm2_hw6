@@ -2,21 +2,25 @@
 title: "Roche_assignmnet"
 author: "Siyan Chen"
 date: "5/4/2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 
-```{r}
+```{r, include=FALSE}
 library(dplyr)
 library(tidytext)
 library(readr)
 library("readtext")
 library(tidyverse)
+library(rvest)
+library(hashmap)
 ```
 
-# extract each article in the collection
+# PART 1:extract each article in the collection
 
-```{r setup, include=FALSE}
+```{r }
 df = readLines("/Users/siyanchen/Desktop/bm2_hw6/data/collection.txt") 
 
 # extract each article in the collection
@@ -83,18 +87,85 @@ article3 = as.data.frame(unlist(contents_3)) %>%
 ```
 
 
+
+# PART 1: Harsh Table
+ 
 ```{r}
+inspection_words1 = 
+  article1%>% 
+  unnest_tokens(word, infor)%>%
+  count(word, sort = TRUE) %>% 
+  rename("n1" = c("n"))
+  
 
-doc_no = grep(x = df, pattern = "^<docno>", value = TRUE)
-doc_no_index = grep(x = df, pattern = "^<docno>")
-doc_id = grep(x = df, pattern = "^<docid>", value = TRUE)
-doc_id_index = grep(x = df, pattern = "^<docid>")
+inspection_words2 = 
+  article2%>% 
+  unnest_tokens(word, infor)%>%
+  count(word, sort = TRUE)%>% 
+  rename("n2"= c("n"))
 
+
+inspection_words3 = 
+  article3%>% 
+  unnest_tokens(word, infor)%>%
+  count(word, sort = TRUE)%>% 
+  rename("n3"= c("n"))
+
+
+
+### outer join and remove number
+
+
+merged_df1 = merge(x = inspection_words1, y = inspection_words2, by = "word", all = TRUE)
+
+merged_df_clean = merge(x = merged_df1, y = inspection_words3, by = "word", all = TRUE) %>% 
+  filter(!str_detect(word,"^[0-9]"))%>% 
+  gather(key = articles, value = count, n1:n3 ) %>% 
+  mutate(articles = recode(articles ,"n1" = "1", "n2" = "2", "n3" = "3")) %>% 
+  mutate(count = replace_na(count,0)) %>% 
+  spread(key = articles, value = count)
+
+
+a1 = rep(1, nrow(merged_df_clean))
+a2 = rep(2, nrow(merged_df_clean))
+a3 = rep(3, nrow(merged_df_clean ))
+
+
+merged_df  = merged_df_clean %>% 
+  cbind(a1, a2, a3)%>% 
+  unite(x1, c(a1, "1"),  sep = ",") %>% 
+  unite(y2, c(a2, "2"),  sep = ",") %>% 
+  unite(z3, c(a3, "3"),  sep = ",") 
+
+merged_df2= merged_df%>% 
+  unite(p, c(x1, y2, z3), sep = "] => [")
+
+### separate hash table for each article
+h1 = hashmap(key=merged_df$word, values = merged_df$x1)
+h2 = hashmap(key=merged_df$word, values = merged_df$y2)
+h3 = hashmap(key=merged_df$word, values = merged_df$z3)
+
+### hash table(list 100)
+h = hashmap(key=merged_df2$word, values = merged_df2$p) 
+options(hashmap.max.print = 20)
+h
 
 ```
 
+# PART 2
 
 ```{r}
-# inspection_words = unnest_tokens(word, df)
+### discrete distribution 
+total_inspection_word = merge(x = merged_df1, y = inspection_words3, by = "word", all = TRUE) %>% 
+  filter(!str_detect(word,"^[0-9]"))%>% 
+  gather(key = articles, value = count, n1:n3 ) %>% 
+  mutate(count = replace_na(count,0)) %>% 
+  spread(key = articles, value = count) %>% 
+  mutate(total_count = n1+n2+n3) 
+
+total_inspection_word %>% 
+  top_n(20) %>% 
+  ggplot(aes(x = total_count)) +
+  geom_histogram()
 ```
 

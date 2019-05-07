@@ -1,0 +1,166 @@
+---
+title: "hw3_bm"
+author: "Siyan Chen"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Problem 1
+
+```{r setup, include=FALSE}
+age = c(25, 35, 45, 55, 65, 75, 25, 35, 45, 55, 65, 75 )
+al_consumption = c(0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1) #0:<80g, #1: >80g  
+y= c(0, 5, 21, 34, 36, 8, 1, 4, 25, 42, 19, 5)
+m = c( 106, 169, 159, 173, 124, 39, 10, 30, 54, 69, 37, 5)
+df = data.frame(age, al_consumption, y, m)
+```
+
+### fit model 
+
+In this question, data follows binomail distribution y ~ bin(n, m). Alchol consumption are categorical variables. Daily alchol consumption less than 80g are set to reference level. 
+Based on the results, model is fitted to be:
+$log\frac{\pi}{1-\pi}$ = -5.023449 + 0.061579*age + 1.78*I{Daily alcohol consumption>80g}
+
+
+```{r, include = FALSE}
+logit.prosp = glm(cbind(y, m-y) ~ age + al_consumption, family = binomial(link = 'logit'))
+
+summary(logit.prosp) 
+```
+
+
+## 1.1
+
+Since we fit the prospective model to the retrospective data, intercept $\beta_0$ is not meaningful to interpret.
+
+Based on the r ouput, log odds of getting esophageal cancer increases 0.061579 for 1 years older if daily alcohol consumption is constant. The log odds ratio of getting esophageal cancer is 1.78 for individuals with > 80g daily alcohol consumption versus individuals with < 80g dailyb alcohol consumtion when other variables are constant. 
+
+
+
+
+
+# Problem 2
+
+The reference level is seed O.aegytiaca 75 in bean media. 
+
+Model: $log\frac{\pi}{1-\pi}$ = -0.43-0.2705*I{seed 73}+1.0647*I{cucumber media} 
+
+
+```{r, include=FALSE}
+### data input by grouped data
+seed = as.factor(c("A","A","B", "B"))
+median =as.factor(c ("bean","cucu","bean","cucu"))
+y = c(99, 201, 49, 75)
+m = c(272, 295, 123, 141)
+data2 = data.frame(seed, median, y, m)
+```
+
+
+
+```{r, include=FALSE}
+### model
+logit_model =  glm(cbind(y, m-y) ~ seed + median, family = binomial(link = 'logit'))
+
+summary(logit_model)
+```
+### 2.1
+Log odds of germination is -0.43 for seed of O.aegytiaca 75 in the bean median. 
+
+Log odds ratio of germination for seed of O.aegytiaca 75 versus seed of O.aegytiaca 73 is -0.27 in the bean median. 
+
+Log odds ratio of germination in bean median versus cucumber media is 1.06 for seed of O.aegytiaca 75.
+
+```{r, include=FALSE}
+dev = sum(residuals(logit_model,type='deviance')^2)
+1-pchisq(dev, 1)  # p value is significant, so we reject the hypothesis, so model does not fit well.
+
+G.stat=sum(residuals(logit_model,type='pearson')^2)# pearson chisq 
+phi=G.stat/(4-3)
+```
+
+# test over-dispersion (half normal plot)
+
+```{r, include= FALSE}
+res=residuals(logit_model,type='pearson')
+```
+
+```{r, echo = FALSE}
+plot(qnorm((4+1:4+0.5)/(2*4+1.125)),sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals', ylim=c(0,2), xlim=c(0,2))
+abline(a=0,b=1)
+abline(a=0,b=sqrt(phi),lty=2)
+
+```
+
+```{r, include=FALSE}
+summary(logit_model,dispersion=phi)
+```
+
+### 2.2
+Deviance is used for testing goodness of fit. P value is 0.011 which is small than significant level.Therefore, this model does not fit well.
+
+There is over disoersion based on the plot and the estimate of dispersion parameter is 6.48. After updating model, we get same coefficient but different variance for coefficient. 
+
+### 2.3
+Possible reseason can be that correlation exists between each seed germination. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#CODE
+
+
+```{r, results= "hide"}
+age = c(25, 35, 45, 55, 65, 75, 25, 35, 45, 55, 65, 75 )
+al_consumption = c(0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1) #0:<80g, #1: >80g  
+y= c(0, 5, 21, 34, 36, 8, 1, 4, 25, 42, 19, 5)
+m = c( 106, 169, 159, 173, 124, 39, 10, 30, 54, 69, 37, 5)
+df = data.frame(age, al_consumption, y, m)
+
+logit.prosp = glm(cbind(y, m-y) ~ age + al_consumption, family = binomial(link = 'logit'))
+
+summary(logit.prosp) 
+
+
+
+```
+
+
+```{r,  results= "hide"}
+seed = as.factor(c("A","A","B", "B"))
+median =as.factor(c ("bean","cucu","bean","cucu"))
+y = c(99, 201, 49, 75)
+m = c(272, 295, 123, 141)
+data2 = data.frame(seed, median, y, m)
+
+### model
+logit_model =  glm(cbind(y, m-y) ~ seed + median, family = binomial(link = 'logit'))
+
+summary(logit_model)
+
+dev = sum(residuals(logit_model,type='deviance')^2)
+1-pchisq(dev, 1)  # p value is significant, so we reject the hypothesis, so model does not fit well.
+
+G.stat=sum(residuals(logit_model,type='pearson')^2)# pearson chisq 
+phi=G.stat/(4-3)
+
+res=residuals(logit_model,type='pearson')
+
+plot(qnorm((4+1:4+0.5)/(2*4+1.125)),sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals', ylim=c(0,2), xlim=c(0,2))
+abline(a=0,b=1)
+abline(a=0,b=sqrt(phi),lty=2)
+
+summary(logit_model,dispersion=phi)
+```
+
