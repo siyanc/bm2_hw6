@@ -15,7 +15,7 @@ library(pscl)
 # Problem 1
 
 ```{r setup, include=FALSE}
-crab_df = read.delim("/Users/siyanchen/Desktop/data/HW5-crab copy.txt", header = TRUE, sep = "")
+crab_df = read.delim("./data/HW5-crab.txt", header = TRUE, sep = "")
 ```
 
 ### a
@@ -84,7 +84,7 @@ $\beta_2$:The log number of satellites for each female increases 0.447 for one u
 # Problem 2
 
 ```{r}
-par_df = read.delim("/Users/siyanchen/Desktop/data/HW5-parasite.txt", header = TRUE, sep = "") %>% 
+par_df = read.delim("./data/HW5-parasite.txt", header = TRUE, sep = "") %>% 
   mutate(Year = as.factor(Year),
          Area = as.factor(Area))
 
