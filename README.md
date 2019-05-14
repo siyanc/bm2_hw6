@@ -1,1 +1,1 @@
-# bm2_hw6
+# home work DS2 AND BM2
