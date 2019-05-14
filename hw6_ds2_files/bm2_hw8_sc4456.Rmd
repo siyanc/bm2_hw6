@@ -1,0 +1,96 @@
+---
+title: "bm2_hw8"
+author: "Siyan Chen"
+date: "4/22/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(nlme)
+library(lme4)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(gee)
+
+df = read_excel("/Users/siyanchen/Desktop/data/HW8-HEALTH.xlsx") %>% 
+  janitor::clean_names() 
+
+dim(df)
+colnames(df)
+head(df)
+```
+
+
+```{r}
+### data manipulation
+df1 = df %>%
+  filter(time == 1) %>% 
+  select(id, health) 
+
+names(df1) = c("id", "health_baseline")
+
+resp1 = left_join(df, df1, by = "id") %>% 
+  mutate(agegroup = as.factor(agegroup),
+         health = as.numeric(health == "Good"),
+         health_baseline = as.factor(health_baseline)) %>% 
+  mutate(time = recode(time, "1" = "1","2" = "3", "3" = "6", "4" = "12")) %>% 
+  mutate(time = as.numeric(time))
+resp = subset(resp1,time>1)
+
+```
+
+
+### (a)
+
+```{r}
+df %>% 
+  filter(time == 1) %>% 
+  ggplot(aes(x = txt, fill =  health)) + geom_bar(position = "dodge")
+
+resp_r = resp1 %>% 
+  filter(time == 1)
+  
+
+glm1 = glm(health ~ txt, data = resp_r, family = "binomial")
+summary(glm1)
+```
+
+According to the plot, when subjects are assigned to intervention treatment group, participants self_rated level of health tend to be good. For control group, the proportion of self_rated level of health to be good are appromately same as that of self_rated level of health to be bad.
+
+According to the model, p value of txt is not significant.Therefore, there is no significant relationship between randomized group and  health self-rating.
+
+### b) 
+```{r}
+gee1 = gee(health ~ health_baseline + txt + agegroup + time, data = resp, family = "binomial", id = id, corstr = "unstructured", scale.fix = TRUE, scale.value = 1)
+
+summary(gee1)
+```
+
+Coefficient interpretation:\
+$\beta0$: The log odds ratio of self_rating health status to be good is 0.125 on average for subpopulation in 15-24 age and control group with health_baseline to be good.\
+$\beta_{health_baselinePoor}$: The log odds rato of self_rating health status to be good is -1.81 on average for group of healt_baseline to be poor versus group of healt_baseline to be good adjusting for other variables.\
+$\beta_{txtIntervention}$ The log odds rato of self_rating health status to be good is 2.10
+on average for intervention group versus control group adjusting for other variables.\
+$\beta_{agegroup25-34}$: The log odds rato of self_rating health status to be good is 1.35 on average for age group 25-34 versus age group 15-24 adjusting for other variables.\
+$\beta_{agegroup35+}$: The log odds rato of self_rating health status to be good is 1.42 on average for age group 35+  versus age group 15-24 adjusting for other variables.\
+$\beta_{time}$:The log odds rato of self_rating health status to be good is 0.032 on average for one unit change in time adjusting for other variables.\
+
+### c)
+
+```{r}
+glmm.fit = glmer(health ~ health_baseline + txt + agegroup + time + (1|id), family = "binomial", data = resp)
+summary(glmm.fit)
+```
+
+The GLMM model is $logit(E(Y_ij|b_i))=(b_i+\beta_1)+X_{ij}^T\beta$
+
+Coefficient interpretation:\
+$\beta_{health_baselinePoor}$: cannot interprete.\
+$\beta_{txtIntervention}$: cannot interprete\
+$\beta_{agegroup25-34}$ cannot interprete\
+$\beta_{agegroup35+}$ cannot interprete\
+$\beta_{time}$ The log odds ratio of self-rating of health to be good is 0.03718 for one unit change in time.
+
+
+For GEE model, all coefficient can be explianed because we consider the subpopulation situation while for GLMM model, some coefficient cannot be explained because it is on individuals levels. For example, the treatment group is predetermined for specidic individuals, so the coefficient cannot be explianed.

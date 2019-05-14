@@ -11,7 +11,7 @@ output:
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(nlme)
-dental_df = read.delim("/Users/siyanchen/Desktop/data/HW6-dental copy.txt", header = TRUE, sep = "") %>%
+dental_df = read.delim("./data/HW6-dental.txt", header = TRUE, sep = "") %>%
   janitor::clean_names()
   
 ```
@@ -52,7 +52,7 @@ $={\sigma_a}^2+{\sigma_b}^2+{\sigma_e}^2$
 ### compound symmetry
 comsym = gls(distance ~ age + gender,dental_df, correlation=corCompSymm(form = ~ 1|child),weights=varIdent(form = ~ 1|age), method="REML")
 summary(comsym)
-corMatrix(comsym$modelStruct$corStruct)[[1]]
+comsym$sigma^2*corMatrix(comsym$modelStruct$corStruct)[[1]]
 ```
 
 

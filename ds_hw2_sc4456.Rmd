@@ -1,0 +1,151 @@
+---
+title: "HW2_DS"
+author: "Siyan Chen_sc4456"
+date: "3/18/2019"
+output: pdf_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(caret)
+library(mgcv)
+library(splines)
+# library(DAAG)
+library(modelr)
+setwd("/Users/siyanchen/Desktop/data")
+df = read_csv("concrete.csv") %>%
+  janitor::clean_names()
+head(df)
+```
+
+# a 
+
+```{r}
+x = model.matrix(compressive_strength~.,df)
+y = df$compressive_strength
+
+theme1 <-trellis.par.get()
+theme1$plot.symbol$col <-rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <-rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <-rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+featurePlot(x, y, plot = "scatter", lables = c("", "Y"),
+            type = c("p"), layout = c(3,3))
+```
+
+# b)
+ 
+```{r}
+set.seed(1)
+cv_df = crossv_mc(df, 10)
+cv_df = 
+  cv_df %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble))
+cv_df = 
+  cv_df %>% 
+  mutate(fit_1 = map(train, ~lm(compressive_strength ~ water, data = .x)),
+         fit_2 = map(train, ~lm(compressive_strength~poly(water, 2), data = .x)),
+         fit_3 = map(train, ~lm(compressive_strength~poly(water, 3), data = .x)),
+         fit_4 = map(train, ~lm(compressive_strength~poly(water, 4), data = .x))) %>% 
+  mutate(rmse_1 = map2_dbl(fit_1, test, ~rmse(model = .x, data = .y)),
+         rmse_2 = map2_dbl(fit_2, test, ~rmse(model = .x, data = .y)),
+         rmse_3 = map2_dbl(fit_3, test, ~rmse(model = .x, data = .y)),
+         rmse_4 = map2_dbl(fit_4, test, ~rmse(model = .x, data = .y)))
+           
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+
+# anova
+fit1 = lm(compressive_strength~water, data = df)
+fit2 = lm(compressive_strength~poly(water, 2), data = df)
+fit3 = lm(compressive_strength~poly(water, 3), data = df)
+fit4 = lm(compressive_strength~poly(water, 4), data = df)
+anova(fit1, fit2, fit3, fit4)
+```
+
+```{r}
+p = ggplot(data = df, aes(x = water, y = compressive_strength)) + geom_point(color = rgb(.2, .4, .2, .5))
+           
+waterlims = range(df$water)
+water.grid = seq(from = waterlims[1], to = waterlims[2])
+
+### plots 
+fit1 = lm(compressive_strength~water, 
+          data = df)
+fit2 = lm(compressive_strength~poly(water,2), 
+          data = df)
+fit3 = lm(compressive_strength~poly(water,3), 
+          data = df)
+fit4 = lm(compressive_strength~poly(water,4), 
+          data = df)
+fit5 = lm(compressive_strength~poly(water,5), 
+          data = df)
+pred1 = predict(fit1, data.frame(water = water.grid), se = TRUE)
+pred2 = predict(fit2, data.frame(water = water.grid), se = TRUE)
+pred3 = predict(fit3, data.frame(water = water.grid), se = TRUE)
+pred4 = predict(fit4, data.frame(water = water.grid), se = TRUE)
+
+p + geom_line(aes(x = water, y = pred1$fit, color = "1"), data = data.frame(pred = pred1$fit, water = water.grid)) +
+  geom_line(aes(x = water, y = pred2$fit, color = "2"), data = data.frame(pred = pred2$fit, water = water.grid)) +
+  geom_line(aes(x = water, y = pred3$fit, color = "3"), data = data.frame(pred = pred3$fit, water = water.grid)) +
+  geom_line(aes(x = water, y = pred4$fit, color = "4"), data = data.frame(pred = pred4$fit, water = water.grid)) +
+  scale_color_manual(name = "degree",
+                     values = c("1" = "blue",
+                               "2" = "red",
+                               "3" = "green",
+                               "4" = "magenta"))
+                               
+
+```
+
+According to cross validation, 4 is chosen for the optimal degree of the polynomial. 
+ANOVA was used to test whether the null hypothesis (simpler model) is true. Based on the output, we reject the null hypothesis and suggest the polynomial model with degree of 4. 
+Both methods give the same results. 
+
+ 
+# c
+
+```{r}
+range = seq(40, 70, by = 10)
+par(mfrow = c(2, 2))
+for (i in range){
+  fit_smooth_i = smooth.spline(df$water, df$compressive_strength, df = i)
+  pred_i = predict(fit_smooth_i, 
+                 x=  water.grid, 
+                 se = TRUE)
+  pred_ss_df_i = data.frame(pred_i = pred_i$y,
+                            water = water.grid)
+  plot = p + geom_line(aes(x = water, y = pred_i), data = pred_ss_df_i)
+  print(plot)
+}
+
+#### cv
+fit = smooth.spline(df$water, df$compressive_strength)
+fit$df
+### plot
+pred_ss = predict(fit, x = water.grid)
+pred_ss_df = data.frame(water = water.grid, pred = pred_ss$y)
+p + geom_line(aes(x = water, y = pred), data = pred_ss_df) + theme_bw()
+
+```
+
+I use the for-loop to fit a smoothing spline using water as predictor with degree from 40 to 70. By generalized cross validation, the degree freedom is 68.9.
+
+# d
+
+```{r}
+gam = gam(compressive_strength ~ cement + blast_furnace_slag + fly_ash + s(water) + superplasticizer + coarse_aggregate + fine_aggregate + age, data = df)
+summary(gam)
+plot(gam)
+```
+
+Based on the output, 106.25 is degree of freedom selected(GCV). From the plot, compressive strength first increases as water increases and then decreases after around 140.

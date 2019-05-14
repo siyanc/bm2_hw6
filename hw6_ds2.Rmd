@@ -1,0 +1,108 @@
+---
+title: "ds2_hw6"
+author: "Siyan Chen"
+date: "5/6/2019"
+output: pdf_document
+---
+
+```{r setup, echo = TRUE, results='hide', warning=FALSE}
+library(ISLR)
+library(factoextra)
+library(dendextend)
+library(ggplot2)
+```
+
+```{r}
+data(USArrests)
+head(USArrests)
+```
+
+### Using hierarchical clustering with complete linkage and Euclidean distance, cluster the states.
+
+```{r}
+hc.complete = hclust(dist(USArrests, method = "euclidean"), method = "complete")
+fviz_dend(hc.complete, k = 3,
+          cex = 0.3,
+          palette = "jco",
+          color_labels_by_k = TRUE,
+          rect = TRUE, rect_fill = TRUE, rect_border = "jco",
+          labels_track_height = 2.5)
+
+```
+
+### (b) Cut the dendrogram at a height that results in three distinct clusters.  Which statesbelong to which clusters?
+```{r}
+tree_cut = cutree(hc.complete,k = 3)
+USArrests[tree_cut == 1,] %>% rownames()
+USArrests[tree_cut == 2,] %>% rownames()
+USArrests[tree_cut == 3,] %>% rownames()
+#### show the three cluster by plot
+dend_players = as.dendrogram(hc.complete)
+dend_colored = color_branches(dend_players, k = 3)
+plot(dend_colored)
+```
+
+###(c) Hierarchically cluster the states using complete linkage and Euclidean distance, afterscaling the variables to have standard deviation one.
+
+```{r}
+df = scale(USArrests)
+hc_complete_scaled = hclust(dist(df, method = "euclidean"), method = "complete")
+fviz_dend(hc_complete_scaled, k = 3,
+          cex = 0.3,
+          palette = "jco",
+          color_labels_by_k = TRUE,
+          rect = TRUE, rect_fill = TRUE, rect_border = "jco",
+          labels_track_height = 2.5)
+
+```
+
+### (d) What effect does scaling the variables have on the hierarchical clustering obtained?  Inyour opinion, should the variables be scaled before the inter-observation dissimilarities arecomputed?
+
+The classification of state by cluster altered and the distance between the three clusters become much lower than that of previous hierarchical clustering.
+
+I think varaibles should be scaled before the the inter-observation dissimilarities arecomputed, because all four variables should be equaly considered for the effect on the cllassification. Without scaling, the $Assault$ will have greater effect.
+
+# Problem 2 PCA
+### PCA  can  be  used  for  image  compression.   In  this  question,  we  use  thejpegpackage  toread and write the .jpeg files.  We use a image of cat for illustration, and the sample codesare given in “image.R”. Read the image usingimg <- readJPEG(‘example.jpg’).  Theimage will be represented as three matrices as an array with each matrix correspondingto the RGB color value scheme and each element in a matrix corresponding to one pixel.Extract the individual color value matrices to perform PCA on each of them.  Reconstructthe original image using the projections of the data with the first 20 PCs.Now use your own .jpg image to perform image compression via PCA with different numbersof PCs (e.g., 50, 100, 200, ...).
+
+```{r}
+library(jpeg)
+image1 = readJPEG("/Users/siyanchen/Desktop/bm2_hw6/data/happy.jpeg")
+dim(image1)
+
+r1 <- image1[,,1]
+g1 <- image1 [,,2]
+b1 <- image1 [,,3]
+img.r.pca1 <- prcomp(r1, center = FALSE)
+img.g.pca1 <- prcomp(g1, center = FALSE)
+img.b.pca1 <- prcomp(b1, center = FALSE)
+
+rgb.pca1 <- list(img.r.pca1, img.g.pca1, img.b.pca1)
+
+# Approximate X with XV_kV_k^T
+compress <- function(pr, k)
+{
+  compressed.img <- pr$x[,1:k] %*% t(pr$rotation[,1:k])
+  compressed.img
+}
+
+
+# Using 100 PCs
+pg100_new <- sapply(rgb.pca1, compress, k = 100, simplify = "array")
+writeJPEG(pg100_new , "pca100_new.jpeg")
+knitr::include_graphics("./pca100_new.jpeg")
+
+# Using 150 PCs
+pg150_new <- sapply(rgb.pca1, compress, k = 150, simplify = "array")
+writeJPEG(pg150_new , "pca150_new.jpeg")
+knitr::include_graphics("./pca150_new.jpeg")
+
+
+# USING 200
+
+pg200_new <- sapply(rgb.pca1, compress, k = 200, simplify = "array")
+writeJPEG(pg200_new , "pca200_new.jpeg")
+knitr::include_graphics("./pca200_new.jpeg")
+```
+
+200 pc is good enough
